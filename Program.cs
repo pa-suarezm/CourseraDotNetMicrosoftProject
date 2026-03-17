@@ -1,13 +1,17 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+﻿using UserManagementAPI.Middleware;
 
-// Add services to the container.
+var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Error Handling (Should be first to catch errors from everything below it)
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+// Swagger (Development only)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -15,7 +19,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
+
+// Authentication (Blocks unauthorized users before logging/processing)
+app.UseMiddleware<AuthMiddleware>();
+
+// Logging (Logs the final request/response details)
+app.UseMiddleware<RequestLoggingMiddleware>();
+
 app.MapControllers();
 
 app.Run();

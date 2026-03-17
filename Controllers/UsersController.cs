@@ -7,10 +7,8 @@ namespace UserManagementAPI.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
-        private static List<User> _users = new List<User>
-        {
-            new User { Id = 1, FirstName = "Alice", LastName = "Tech", Email = "alice@techhive.com", Department = "IT" }
-        };
+        private static Dictionary<int, User> _users = new Dictionary<int, User>();
+        private int currId = 1;
 
         // GET: api/users
         [HttpGet]
@@ -20,7 +18,7 @@ namespace UserManagementAPI.Controllers
         [HttpGet("{id}")]
         public ActionResult<User> GetById(int id)
         {
-            var user = _users.FirstOrDefault(u => u.Id == id);
+            _users.TryGetValue(id, out var user);
             return user == null ? NotFound() : Ok(user);
         }
 
@@ -28,8 +26,14 @@ namespace UserManagementAPI.Controllers
         [HttpPost]
         public ActionResult<User> Create(User newUser)
         {
-            newUser.Id = _users.Max(u => u.Id) + 1;
-            _users.Add(newUser);
+            if (!IsUserValid(newUser))
+            {
+                return BadRequest("User has missing or invalid data");
+            }
+
+            newUser.Id = currId;
+            currId ++;
+            _users.Add(newUser.Id, newUser);
             return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, newUser);
         }
 
@@ -37,7 +41,7 @@ namespace UserManagementAPI.Controllers
         [HttpPut("{id}")]
         public IActionResult Update(int id, User updatedUser)
         {
-            var user = _users.FirstOrDefault(u => u.Id == id);
+            _users.TryGetValue(id, out var user);
             if (user == null) return NotFound();
 
             user.FirstName = updatedUser.FirstName;
@@ -52,11 +56,25 @@ namespace UserManagementAPI.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var user = _users.FirstOrDefault(u => u.Id == id);
-            if (user == null) return NotFound();
+            if (_users.ContainsKey(id)) return NotFound();
 
-            _users.Remove(user);
+            _users.Remove(id);
             return NoContent();
         }
+
+        #region private methods
+        private bool IsUserValid(User newUser)
+        {
+            if (string.IsNullOrEmpty(newUser.FirstName) ||
+                string.IsNullOrEmpty(newUser.LastName) ||
+                string.IsNullOrEmpty(newUser.Email) ||
+                string.IsNullOrEmpty(newUser.Department))
+            {
+                return false;
+            }
+
+            return true;
+        }
+        #endregion
     }
 }
